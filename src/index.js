@@ -6,7 +6,7 @@ app.use(express.json());
 const EXPRESS_PORT = 3000;
 
 app.post('/new-bucket', (req, res)=> {
-    res({message:`Created bucket with the name: ${req.body.name}`});
+    res.send({message:`Created bucket with the name: ${req.body.bucket}`});
 
 })
 
