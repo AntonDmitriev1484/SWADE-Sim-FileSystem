@@ -1,17 +1,13 @@
 import express from "express"
 import fs from "fs"
 import multer from "multer"
-// import busboy from "connect-busboy"
-import fileUpload from "express-fileupload"
 
 const app = express();
 app.use(express.json());
-//app.use(busboy());
 const EXPRESS_PORT = 3000;
 const upload = multer({ dest: 'store/' });
 
 app.post('/new-bucket', (req, res)=> {
-
     // Remember: This path is from app/ as thats the Docker working directory
     fs.mkdir(`store/${req.body.bucket}`, (err) => {
         if (err) {
@@ -25,9 +21,7 @@ app.post('/new-bucket', (req, res)=> {
       });
 })
 
-app.post('/create-file', upload.single('file'), (req, res)=> {
-  // console.log(' req.body ' + req.body.toString());
-  // console.log(' req.file ' + req.file.toString());
+app.post('/upload-file', upload.single('file'), (req, res)=> {
 
     const path = `store/${req.body.bucket}/${req.body.path}`
     fs.writeFile(`store/water.csv`, JSON.stringify(req.file), (err) => {
@@ -40,17 +34,6 @@ app.post('/create-file', upload.single('file'), (req, res)=> {
           res.send({message:`Created file in bucket ${req.body.bucket} at ${req.body.path}.`});
         }
       });
-        // req.pipe(req.busboy);
-  // req.busboy.on('file', (fieldname, file, filename) => {
-  //   console.log("Uploading: " + filename);
-  //   //Path where image will be uploaded
-  //   fstream = fs.createWriteStream('store/water.csv');
-  //   file.pipe(fstream);
-  //   fstream.on('close', () => {    
-  //       console.log("Upload Finished of " + filename);              
-  //   }
-  //   );
-  //});
     
 })
 
