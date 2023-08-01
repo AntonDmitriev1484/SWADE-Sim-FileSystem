@@ -26,10 +26,21 @@ app.post('/new-bucket', (req, res)=> {
 })
 
 app.post('/create-file', upload.single('file'), (req, res)=> {
-  console.log(req.body);
-  console.log(req.file);
+  // console.log(' req.body ' + req.body.toString());
+  // console.log(' req.file ' + req.file.toString());
 
-  // req.pipe(req.busboy);
+    const path = `store/${req.body.bucket}/${req.body.path}`
+    fs.writeFile(`store/water.csv`, JSON.stringify(req.file), (err) => {
+        if (err) {
+          console.error('Error creating file', err);
+          res.send({message:`Error creating file`});
+          // How do I deal with errors in express again lol? Server status?
+        } else {
+          console.log('File created successfully!');
+          res.send({message:`Created file in bucket ${req.body.bucket} at ${req.body.path}.`});
+        }
+      });
+        // req.pipe(req.busboy);
   // req.busboy.on('file', (fieldname, file, filename) => {
   //   console.log("Uploading: " + filename);
   //   //Path where image will be uploaded
@@ -40,17 +51,6 @@ app.post('/create-file', upload.single('file'), (req, res)=> {
   //   }
   //   );
   //});
-
-    // fs.writeFile(`store/${req.body.bucket}/${req.body.path}`, file, (err) => {
-    //     if (err) {
-    //       console.error('Error creating file', err);
-    //       res.send({message:`Error creating file`});
-    //       // How do I deal with errors in express again lol? Server status?
-    //     } else {
-    //       console.log('File created successfully!');
-    //       res.send({message:`Created file in bucket ${req.body.bucket} at ${req.body.path}.`});
-    //     }
-    //   });
     
 })
 
