@@ -5,7 +5,27 @@ import multer from "multer"
 const app = express();
 app.use(express.json());
 const EXPRESS_PORT = 3000;
-const upload = multer({ dest: 'store/' });
+
+// DiskStorage gives me more control over where the file is stored
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    
+    const dir_path = `store/${req.body.bucket}/${req.body.path}`
+    fs.mkdir(dir_path, (err) => {
+      if (err) {
+        console.error('Error creating directory:', err);
+      } else {
+        console.log('Directory created successfully!');
+        // Not sure what cb does
+        cb(null, dir_path)
+      }
+    });
+  },
+  filename: function (req, file, cb) {
+    cb(null, req.body.filename)
+  }
+})
+const upload = multer({ storage: storage });
 
 app.post('/new-bucket', (req, res)=> {
     // Remember: This path is from app/ as thats the Docker working directory
@@ -23,17 +43,6 @@ app.post('/new-bucket', (req, res)=> {
 
 app.post('/upload-file', upload.single('file'), (req, res)=> {
 
-    const path = `store/${req.body.bucket}/${req.body.path}`
-    fs.writeFile(`store/water.csv`, JSON.stringify(req.file), (err) => {
-        if (err) {
-          console.error('Error creating file', err);
-          res.send({message:`Error creating file`});
-          // How do I deal with errors in express again lol? Server status?
-        } else {
-          console.log('File created successfully!');
-          res.send({message:`Created file in bucket ${req.body.bucket} at ${req.body.path}.`});
-        }
-      });
     
 })
 
