@@ -21,8 +21,11 @@ const storage = multer.diskStorage({
       }
     });
   },
+
   filename: function (req, file, cb) {
-    cb(null, req.body.filename)
+    // req.body.filename is the same thing as file.originalname
+    console.log('Wrote '+file.originalname);
+    cb(null, file.originalname);
   }
 })
 const upload = multer({ storage: storage });
@@ -41,8 +44,15 @@ app.post('/new-bucket', (req, res)=> {
       });
 })
 
-app.post('/upload-file', upload.single('file'), (req, res)=> {
+app.post('/upload-file', upload.single('file'), upload.single('metadata_file'), (req, res)=> {
 
+  // upload.array('files') is just not recognizing the second file whatsoever?
+
+  
+  // console.log(req.files); // Just not printing????
+  // req.files.map((file) => {
+  //   console.log('wrote file '+ file.originalname);
+  // });
     
 })
 
