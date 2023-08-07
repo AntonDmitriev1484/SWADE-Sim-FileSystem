@@ -9,17 +9,24 @@ const EXPRESS_PORT = 3000;
 // DiskStorage gives me more control over where the file is stored
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
+
+    console.log(file);
     
     const dir_path = `store/${req.body.bucket}/${req.body.path}`
-    fs.mkdir(dir_path, (err) => {
-      if (err) {
-        console.error('Error creating directory:', err);
-      } else {
-        console.log('Directory created successfully!');
-        // Not sure what cb does
-        cb(null, dir_path)
-      }
-    });
+    console.log(dir_path);
+
+    if (!fs.existsSync(dir_path)){
+      fs.mkdir(dir_path, (err) => {
+        if (err) {
+          console.error('Error creating directory:', err);
+        } else {
+          console.log('Directory created successfully!');
+          // Not sure what cb does
+        }
+      });
+    }
+
+    cb(null, dir_path)
   },
 
   filename: function (req, file, cb) {
@@ -28,6 +35,7 @@ const storage = multer.diskStorage({
     cb(null, file.originalname);
   }
 })
+
 const upload = multer({ storage: storage });
 
 app.post('/new-bucket', (req, res)=> {
@@ -44,15 +52,7 @@ app.post('/new-bucket', (req, res)=> {
       });
 })
 
-app.post('/upload-file', upload.single('file'), upload.single('metadata_file'), (req, res)=> {
-
-  // upload.array('files') is just not recognizing the second file whatsoever?
-
-  
-  // console.log(req.files); // Just not printing????
-  // req.files.map((file) => {
-  //   console.log('wrote file '+ file.originalname);
-  // });
+app.post('/upload-file', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'metadata_file', maxCount: 1 }]), (req, res)=> {
     
 })
 
