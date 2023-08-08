@@ -65,7 +65,7 @@ app.post('/filesys-read', (req, res) => {
 
  Promise.all(query_promises)
  .then( query_results => {
-   //console.log(query_results);
+   console.log('FS '+query_results);
    res.send({query_results: query_results});
  })
  .catch( err => {
