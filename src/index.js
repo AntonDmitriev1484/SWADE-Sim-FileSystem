@@ -59,11 +59,12 @@ app.post('/upload-file', upload.fields([{ name: 'file', maxCount: 1 }, { name: '
 
 app.post('/filesys-read', (req, res) => {
 
-  let query_promises = req.body.files.map((filepath) => {
-    return query_csv(`store/${req.body.bucket}/${filepath}`, req.body.condition);
+  const query_predicates = build_query_predicates(req.body.where);
+  const query_promises = req.body.from_files.map((filepath) => {
+    return query_csv(`store/${req.body.in_bucket}/${filepath}`, req.body.select_fields, query_predicates);
  });
 
- Promise.all(query_promises)
+ Promise.allSettled(query_promises)
  .then( query_results => {
    console.log('FS '+query_results);
    res.send({query_results: query_results});
@@ -74,7 +75,9 @@ app.post('/filesys-read', (req, res) => {
 
 })
 
-async function query_csv(filepath, value) {
+async function query_csv(filepath, select_fields, predicates) {
+
+  // predicates replace 'value'
 
   const read_stream = fs.createReadStream(filepath);
 
@@ -84,8 +87,21 @@ async function query_csv(filepath, value) {
     read_stream.pipe(csv())
     .on('data', 
       (row) => {
-        if ((row['energy(kWh/hh)'].trim() <= (value+0.0001)) && (row['energy(kWh/hh)'].trim() >= (value-0.0001))) {
-          query_results.push(row);
+
+        // Each predicate checks some field, on some range
+        // When all predicates are true, we know this row satisifes our query
+        let fulfills_predicates = predicates.reduce( (acc, predicate) => {
+          return acc && predicate(row); 
+        }, true)
+
+        if (fulfills_predicates) {
+          // Filter all fields in the row to be just what was request by
+          // select_fields in the query
+          let row_result = {};
+          select_fields.forEach((field) => {
+            row_result[field] = row[field]
+          })
+          query_results.push(row_result);
         }
     })
     .on('end', () => {
@@ -96,6 +112,61 @@ async function query_csv(filepath, value) {
       reject(error);
     });
   })
+}
+
+// Converts json 'where' clauses to an array of predicates we can run through on each row 
+function build_query_predicates(where_clause) {
+  return where_clause.map(
+    (clause) => {
+
+      // Depending on what field our clause checks, we need to convert to the proper comparable objects
+      let f = (field) => {
+
+        if (field === undefined) {
+          return field;
+        }
+
+        if (clause.field === 'tstp') {
+          //console.log(`String read in row: ${field}`);
+
+          // For NOT MAC02 files
+          const dateTimeString = field;
+          const [datePart, timePart] = dateTimeString.split(' '); // Split date and time parts
+          const [year, month, day] = datePart.split('-').map(Number); // Parse year, month, day
+          const [hours, minutes, seconds] = timePart.split(':').map(Number); // Parse hours, minutes, seconds
+
+          // Create a new Date object with the parsed values
+          const dateTime = new Date(year, month - 1, day, hours, minutes, seconds);
+          
+          //console.log(`Converted dateTime object: ${dateTime}`);
+          return dateTime;
+        }
+        else if (clause.field === 'energy(kWh/hh)') {
+          return field.trim();
+        }
+
+      }
+
+      const lower = f(clause.range[0]);
+      const upper = f(clause.range[1]);
+
+      if (clause.range[0] === undefined) { // Lower range = inf
+        return row => (f(row[clause.field]) < upper)
+      }
+      else if (clause.range[1] === undefined) { // Upper range = inf
+        return row => (f(row[clause.field]) > lower)
+      }
+      else { // We have a range
+        return row => {
+          const formatted_field = f(row[clause.field])
+          const above_lower = formatted_field > lower
+          const below_upper = formatted_field < upper
+
+          return (above_lower && below_upper);
+        }
+      }
+    }
+  )
 }
 
 app.listen(EXPRESS_PORT, () => {
